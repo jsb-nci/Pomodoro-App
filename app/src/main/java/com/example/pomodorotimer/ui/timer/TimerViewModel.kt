@@ -1,8 +1,12 @@
 package com.example.pomodorotimer.ui.timer
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,42 +28,37 @@ data class TimerUiState(
             1f - (timeLeftInSeconds.toFloat() / totalTimeInSeconds.toFloat())
         } else 0f
 }
+// Keep the TimerUiState definition if it's not in a separate file
 @HiltViewModel
-class TimerViewModel @Inject constructor(): ViewModel()  {
-    private val _uiState = MutableStateFlow(TimerUiState())
-    val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
+class TimerViewModel @Inject constructor(
+    @ApplicationContext private val context: Context
+): ViewModel()  {
+
+    // Observe the state directly from the Service's companion object
+    val uiState: StateFlow<TimerUiState> = TimerService.uiState
+
 
     fun startTimer() {
-        // Avoid launching multiple timer loops if already running
-        if (_uiState.value.isRunning) return
-
-        _uiState.value = _uiState.value.copy(isRunning = true)
-
-        viewModelScope.launch {
-            while (_uiState.value.isRunning && _uiState.value.timeLeftInSeconds > 0) {
-                delay(1000L)
-
-                _uiState.value = _uiState.value.copy(
-                    timeLeftInSeconds = _uiState.value.timeLeftInSeconds - 1
-                )
-            }
-
-            // Stop running once timer reaches 0
-            if (_uiState.value.timeLeftInSeconds == 0) {
-                _uiState.value = _uiState.value.copy(isRunning = false)
-            }
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.ACTION_START
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
         }
     }
-    fun pauseTimer(){
-        if(_uiState.value.isRunning == false )return
-        _uiState.value = _uiState.value.copy(isRunning = false)
+    fun pauseTimer() {
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.ACTION_PAUSE
+        }
+        context.startService(intent)
     }
-
     fun resetTimer() {
-        _uiState.value = _uiState.value.copy(
-            timeLeftInSeconds = _uiState.value.totalTimeInSeconds,
-            isRunning = false
-        )
+        val intent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.ACTION_RESET
+        }
+        context.startService(intent)
     }
 }
 

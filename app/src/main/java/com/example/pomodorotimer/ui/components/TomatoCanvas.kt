@@ -16,7 +16,7 @@ fun TomatoCanvas(
     progress: Float, // 0.0f (empty) to 1.0f (full)
     modifier: Modifier = Modifier
 ){
-    Canvas(modifier = Modifier) {
+    Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
 
