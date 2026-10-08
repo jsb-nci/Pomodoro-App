@@ -17,10 +17,16 @@ import javax.inject.Inject
 import kotlin.collections.copy
 import kotlin.compareTo
 
+// Define the different stages of the Pomodoro cycle
+enum class TimerPhase {
+    WORK, BREAK, BIG_BREAK, FINISHED
+}
 data class TimerUiState(
-    val timeLeftInSeconds: Int = 25 * 60, // 25 minutes default
+    val timeLeftInSeconds: Int = 25 * 60, // 25 minutes default 25 * 60
     val totalTimeInSeconds: Int = 25 * 60,
-    val isRunning: Boolean = false
+    val isRunning: Boolean = false,
+    val currentSession: Int = 1, // Tracks sessions 1 through 8
+    val phase: TimerPhase = TimerPhase.WORK
 ) {
     // 🧮 Automatically calculates the progress for TomatoCanvas (0.0f to 1.0f)
     val progress: Float
@@ -30,7 +36,7 @@ data class TimerUiState(
 }
 // Keep the TimerUiState definition if it's not in a separate file
 @HiltViewModel
-class TimerViewModel @Inject constructor(
+class   TimerViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ): ViewModel()  {
 
