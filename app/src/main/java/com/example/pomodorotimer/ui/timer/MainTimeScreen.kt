@@ -67,16 +67,23 @@ fun MainTimerContent(
         )
 
         // 3. Digital Clock Text (Glowing CRT Green with Pixel Font)
+        val glowColor = when (uiState.phase) {
+            TimerPhase.WORK -> RetroGreen
+            TimerPhase.BREAK -> RetroGreen
+            TimerPhase.BIG_BREAK -> RetroBlue
+            TimerPhase.FINISHED -> RetroYellow
+        }
+
         Text(
             text = timeText,
             style = TextStyle(
-                color = RetroGreen,
+                color = glowColor,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = PressStart2PFontFamily,
                 letterSpacing = 2.sp,
                 shadow = Shadow(
-                    color = RetroGreen.copy(alpha = 0.8f),
+                    color = glowColor.copy(alpha = 0.8f),
                     offset = Offset(0f, 0f),
                     blurRadius = 16f
                 )
@@ -84,35 +91,60 @@ fun MainTimerContent(
         )
 
         // 4. Status Indicator
-        val statusText = when {
-            uiState.isRunning -> ">> RUNNING <<"
-            uiState.timeLeftInSeconds < uiState.totalTimeInSeconds -> ">> PAUSED <<"
-            else -> ">> READY? <<"
+        val statusText = when (uiState.phase) {
+            TimerPhase.WORK -> {
+                val base = "SESSION ${uiState.currentSession}/8"
+                if (!uiState.isRunning && uiState.timeLeftInSeconds < uiState.totalTimeInSeconds) {
+                    ">> $base (PAUSED) <<"
+                } else {
+                    ">> $base <<"
+                }
+            }
+            TimerPhase.BREAK -> ">> QUICK BREAK <<"
+            TimerPhase.BIG_BREAK -> ">> BIG BREAK <<"
+            TimerPhase.FINISHED -> ">> CYCLE COMPLETE <<"
+        }
+
+        val statusColor = when (uiState.phase) {
+            TimerPhase.WORK -> RetroOrange
+            TimerPhase.BREAK -> RetroGreen
+            TimerPhase.BIG_BREAK -> RetroBlue
+            TimerPhase.FINISHED -> RetroYellow
         }
 
         Text(
             text = statusText,
-            color = RetroOrange,
+            color = statusColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = PressStart2PFontFamily,
             letterSpacing = 1.sp
         )
 
-        // 5. Green Block Progress Bar (14 total blocks)
-        val totalBlocks = 14
-        val fillFraction = (1f - uiState.progress).coerceIn(0f, 1f)
-        val activeBlocks = (totalBlocks * fillFraction).toInt()
+        // 5. Progress Bar (Exactly 8 blocks for 8 sessions)
+        val totalBlocks = 8
+        val completedSessions = when (uiState.phase) {
+            TimerPhase.FINISHED -> 8
+            TimerPhase.WORK -> uiState.currentSession - 1
+            else -> uiState.currentSession // BREAK or BIG_BREAK means session just finished
+        }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 0 until totalBlocks) {
-                val blockColor = if (i < activeBlocks) RetroGreen else RetroGreenDark
+                val isCurrentSession = (i == completedSessions && uiState.phase == TimerPhase.WORK)
+                
+                val blockColor = when {
+                    i < completedSessions -> RetroGreen // Finished sessions
+                    isCurrentSession -> RetroYellow      // Session in progress
+                    else -> RetroGreenDark             // Future sessions
+                }
+
                 Box(
                     modifier = Modifier
-                        .size(width = 12.dp, height = 14.dp)
+                        .size(width = 16.dp, height = 20.dp)
                         .background(blockColor)
                 )
             }
@@ -127,8 +159,9 @@ fun MainTimerContent(
                 .padding(horizontal = 8.dp)
         ) {
             if (!uiState.isRunning) {
+                val buttonText = if (uiState.phase == TimerPhase.FINISHED) "RESTART" else "START"
                 RetroButton(
-                    text = "START",
+                    text = buttonText,
                     onClick = onStartClick,
                     containerColor = RetroGreenButton,
                     contentColor = Color.Black,
@@ -154,9 +187,14 @@ fun MainTimerContent(
         }
 
         // 7. Session Footer
-        val totalMinutes = uiState.totalTimeInSeconds / 60
+        val footerText = when (uiState.phase) {
+            TimerPhase.WORK -> "FOCUS TIME · 25 MIN"
+            TimerPhase.BREAK -> "REST TIME · 5 MIN"
+            TimerPhase.BIG_BREAK -> "REST TIME · 60 MIN"
+            TimerPhase.FINISHED -> "TOTAL PROGRESS · 8/8"
+        }
         Text(
-            text = "SESSION · $totalMinutes MIN",
+            text = footerText,
             color = RetroGray,
             fontSize = 8.sp,
             fontFamily = PressStart2PFontFamily,
@@ -174,7 +212,9 @@ fun MainTimerPreview() {
             uiState = TimerUiState(
                 timeLeftInSeconds = 1500,
                 totalTimeInSeconds = 1500,
-                isRunning = false
+                isRunning = false,
+                currentSession = 1,
+                phase = TimerPhase.WORK
             ),
             onStartClick = {},
             onPauseClick = {},

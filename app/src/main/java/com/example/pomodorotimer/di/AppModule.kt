@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.pomodorotimer.data.DataRepository
 import com.example.pomodorotimer.data.DefaultDataRepository
+import com.example.pomodorotimer.data.UserPreferencesRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -25,5 +26,11 @@ abstract class AppModule {
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.dataStore
+
+    @Provides
+    @Singleton
+    fun provideUserPreferencesRepository(dataStore: DataStore<Preferences>): UserPreferencesRepository {
+        return UserPreferencesRepository(dataStore)
+    }
   }
 }
